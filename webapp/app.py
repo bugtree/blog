@@ -11,6 +11,7 @@ from jinja2 import Environment, FileSystemLoader
 
 import orm 
 from webframe import add_routes, add_static
+from config import configs
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -92,12 +93,13 @@ def datetime_filter(t):
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day)
 
 async def init(loop):
-    await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='bugtree', password='bugtree', db='blog')
+    await orm.create_pool(loop=loop, **configs.db)
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory])
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_static(app)
     add_routes(app, 'handlers')
+    
     srv = await loop.create_server(app.make_handler(), '127.0.0.1', 9000)
     logging.info("server started at http://127.0.0.1:9000...")
 
