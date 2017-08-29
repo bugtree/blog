@@ -7,23 +7,24 @@ logging.basicConfig(level=logging.DEBUG)
 import aiomysql, asyncio
 
 async def create_pool(loop, **kw):
-    logging.info("create database connection pool....")
+    logging.info('create database connection pool...')
     global __pool
     __pool = await aiomysql.create_pool(
-        host = kw.get("host", "localhost"),
-        port = kw.get("port", 3306),
-        user = kw["user"],
-        password = kw["password"],
-        db = kw["db"],
-        charset = kw.get("charset", "utf8"),
-        autocommit = kw.get("autocommit", True),
-        maxsize = kw.get("maxsize", 10),
-        minsize = kw.get("minsize", 1),
-        loop = loop
-     )
+        host=kw.get('host', 'localhost'),
+        port=kw.get('port', 3306),
+        user=kw['user'],
+        password=kw['password'],
+        db=kw['db'],
+        charset=kw.get('charset', 'utf8'),
+        autocommit=kw.get('autocommit', True),
+        maxsize=kw.get('maxsize', 10),
+        minsize=kw.get('minsize', 1),
+        loop=loop
+    )
 
 async def select(sql, args, size=None):
-    logging.info(sql, args)
+#    logging.info(sql, args)
+    logging.info(sql)
     global __pool
     async with __pool.get() as conn:
         async with conn.cursor(aiomysql.DictCursor) as cur:
@@ -62,7 +63,7 @@ class Field(object):
         self.default = default
         
     def __str__(self):
-        logging.info("<%s %s %s>" % (self.__class__.__name__, self.name, self.column_type))
+        return '<%s, %s:%s>' % (self.__class__.__name__, self.column_type, self.name)
 
 class StringField(Field):
     def __init__(self, name=None, primary_key=False, default=None, ddl='vchar(100)'):
@@ -115,15 +116,15 @@ class ModelMetaclass(type):
         for k in mappings.keys():
             attrs.pop(k)
 
-        escaped_fields = list(map(lambda f: '%s' % f, fields))
+        escaped_fields = list(map(lambda f: '`%s`' % f, fields))
 
         attrs['__mappings__'] = mappings
         attrs['__table__'] = table_name
         attrs['__primary_key__'] = primary_key
         attrs['__fields__'] = fields
-        attrs['__select__'] = 'select `%s`, %s from `%s`' % (primary_key, ','.join(escaped_fields), table_name)
-        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (table_name, ','.join(escaped_fields), primary_key, create_args_string(len(escaped_fields) + 1))
-        attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (table_name, ','.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primary_key)
+        attrs['__select__'] = 'select `%s`, %s from `%s`' % (primary_key, ', '.join(escaped_fields), table_name)
+        attrs['__insert__'] = 'insert into `%s` (%s, `%s`) values (%s)' % (table_name, ', '.join(escaped_fields), primary_key, create_args_string(len(escaped_fields) + 1))
+        attrs['__update__'] = 'update `%s` set %s where `%s`=?' % (table_name, ', '.join(map(lambda f: '`%s`=?' % (mappings.get(f).name or f), fields)), primary_key)
         attrs['__delete__'] = 'delete from `%s` where `%s`=?' % (table_name, primary_key)
         return super(ModelMetaclass, cls).__new__(cls, name, bases, attrs)
 
