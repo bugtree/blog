@@ -167,7 +167,7 @@ class Model(dict, metaclass=ModelMetaclass):
         orderby= kw.get('orderBy', None)
         if orderby:
             sql.append('order by')
-            sql.append(orderBy)
+            sql.append(orderby)
         limit = kw.get('limit', None)
         if limit is not None:
             sql.append('limit')
