@@ -81,6 +81,12 @@ async def index(*, page='1'):
         'blogs': blogs
     }
 
+@get('/about')
+async def about():
+    return {
+        '__template__': 'about.html'
+    }
+
 @get('/blog/{id}')
 async def get_blog(id):
     blog = await Blog.find(id)
@@ -251,6 +257,15 @@ async def api_register_user(*, email, name, password):
     r.content_type = 'application/json'
     r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
     return r
+
+@post('/api/user/{id}/delete')
+async def api_delete_user(id, request):
+    check_admin(request)
+    user = await User.find(id)
+    if user is None:
+        raise APIResourceNotFoundError('User')
+    await user.remove()
+    return dict(id=id)
 
 @get('/api/blogs')
 async def api_blogs(*, page='1'):
