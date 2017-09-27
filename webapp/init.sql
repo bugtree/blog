@@ -35,6 +35,7 @@ create table blogs (
     `name` varchar(50) not null,
     `summary` varchar(200) not null,
     `content` text not null,
+    `view_count` int unsigned not null,
     `created_at` real not null,
     key `idx_created_at` (`created_at`),
     primary key (`id`)

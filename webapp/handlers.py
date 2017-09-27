@@ -67,7 +67,8 @@ async def cookie2user(cookie_str):
         return None
 
 @get('/')
-async def index(*, page='1'):
+async def index(request, *, page='1'):
+    user = request.__user__
     page_index = get_page_index(page)
 
     #去掉__about__页面
@@ -81,22 +82,28 @@ async def index(*, page='1'):
     return {
         '__template__': 'blogs.html',
         'page': page,
-        'blogs': blogs
+        'blogs': blogs,
+        'user': user,
+
     }
 
 @get('/about')
-async def about():
+async def about(request):
+    user = request.__user__
     blog = await Blog.find_all(where='name=?', args=['__about__'])
     blog[0].html_content = markdown2.markdown(blog[0].content, extras=['code-friendly', 'fenced-code-blocks'])
 
     return {
         '__template__': 'about.html',
         'blog': blog[0], 
+        'user': user,
     }
 
 @get('/blog/{id}')
 async def get_blog(id):
     blog = await Blog.find(id)
+    blog.view_count = blog.view_count + 1
+    await blog.update()
     comments = await Comment.find_all('blog_id=?', [id], orderby='created_at desc')
     for c in comments:
         c.html_content = text2html(c.content)

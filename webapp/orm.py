@@ -71,9 +71,9 @@ class StringField(Field):
 class BooleanField(Field):
     def __init__(self, name=None, default=False):
         super(BooleanField, self).__init__(name, 'boolean', False, default)
-class InterFiled(Field):
+class InterField(Field):
     def __init__(self, name=None, primary_key=False, default=0):
-        super(InterFiled, self).__init__(name, 'bigint', primary_key, default)
+        super(InterField, self).__init__(name, 'int', primary_key, default)
 class FloatField(Field):
     def __init__(self, name=None, primary_key=False, default=0.0):
         super(FloatField, self).__init__(name, 'real', primary_key, default)
