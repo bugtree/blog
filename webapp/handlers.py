@@ -12,6 +12,9 @@ import markdown2
 COOKIE_NAME = 'blogcookie'
 _COOKIE_KEY = configs.session.secret
 
+_RE_EMAIL = re.compile(r'^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
+_RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
+
 def check_admin(request):
     if request.__user__ is None or not request.__user__.admin:
         raise APIPermissionError()
@@ -126,31 +129,6 @@ def signin():
         '__template__': 'signin.html'
     }
 
-@post('/api/authenticate')
-async def authenticate(*, email, password):
-    if not email:
-        raise APIValueError('email', 'Invalid email.')
-    if not password:
-        raise APIValueError('password', 'Invalid password.')
-    users = await User.find_all('email=?', [email])
-    if len(users) == 0:
-        raise APIValueError('email', 'Email not exist.')
-    user = users[0]
-    # check passwd:
-    sha1 = hashlib.sha1()
-    sha1.update(user.id.encode('utf-8'))
-    sha1.update(b':')
-    sha1.update(password.encode('utf-8'))
-    if user.password != sha1.hexdigest():
-        raise APIValueError('password', 'Invalid password.')
-    # authenticate ok, set cookie:
-    r = web.Response()
-    r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
-    user.password = '******'
-    r.content_type = 'application/json'
-    r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
-    return r
-
 @get('/signout')
 def signout(request):
     referer = request.headers.get('Referer')
@@ -200,6 +178,33 @@ def manage_users(*, page='1'):
         'page_index': get_page_index(page)
     }
 
+#__TODO category
+
+@post('/api/authenticate')
+async def authenticate(*, email, password):
+    if not email:
+        raise APIValueError('email', 'Invalid email.')
+    if not password:
+        raise APIValueError('password', 'Invalid password.')
+    users = await User.find_all('email=?', [email])
+    if len(users) == 0:
+        raise APIValueError('email', 'Email not exist.')
+    user = users[0]
+    # check passwd:
+    sha1 = hashlib.sha1()
+    sha1.update(user.id.encode('utf-8'))
+    sha1.update(b':')
+    sha1.update(password.encode('utf-8'))
+    if user.password != sha1.hexdigest():
+        raise APIValueError('password', 'Invalid password.')
+    # authenticate ok, set cookie:
+    r = web.Response()
+    r.set_cookie(COOKIE_NAME, user2cookie(user, 86400), max_age=86400, httponly=True)
+    user.password = '******'
+    r.content_type = 'application/json'
+    r.body = json.dumps(user, ensure_ascii=False).encode('utf-8')
+    return r
+
 @get('/api/comments')
 async def api_comments(*, page='1'):
     page_index = get_page_index(page)
@@ -244,10 +249,6 @@ async def api_get_users(*, page='1'):
     for u in users:
         u.passwd = '******'
     return dict(page=p, users=users)
-
-
-_RE_EMAIL = re.compile(r'^[a-z0-9\.\-\_]+\@[a-z0-9\-\_]+(\.[a-z0-9\-\_]+){1,4}$')
-_RE_SHA1 = re.compile(r'^[0-9a-f]{40}$')
 
 @post('/api/users')
 async def api_register_user(*, email, name, password):
