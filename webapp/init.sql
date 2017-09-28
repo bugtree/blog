@@ -37,6 +37,8 @@ create table blogs (
     `content` text not null,
     `view_count` int unsigned not null,
     `created_at` real not null,
+    `cat_id` varchar(50),
+    `cat_name` varchar(50),
     key `idx_created_at` (`created_at`),
     primary key (`id`)
 
@@ -52,4 +54,12 @@ create table comments (
     `created_at` real not null,
     key `idx_created_at` (`created_at`),
     primary key (`id`)
+) engine=innodb default charset=utf8;
+
+create table categorys (
+    `id` varchar(50) not null primary key,
+    `name` varchar(50) not null,
+    `created_at` real not null,
+    unique key `idx_name` (`name`),
+    key `idx_created_at` (`created_at`)
 ) engine=innodb default charset=utf8;

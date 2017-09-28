@@ -3,7 +3,7 @@
 
 import re, time, json, logging, hashlib, base64, asyncio
 from webframe import get, post
-from model import User, Comment, Blog, next_id
+from model import User, Comment, Blog, Category, next_id
 from config import configs
 from aiohttp import web
 from apis import Page, APIValueError, APIResourceNotFoundError
@@ -179,6 +179,28 @@ def manage_users(*, page='1'):
     }
 
 #__TODO category
+@get('/manage/categorys')
+def manage_categorys(*, page='1'):
+    return {
+        '__template__': 'manage_categorys.html',
+        'page_index': get_page_index(page),
+    }
+
+@get('/manage/categorys/create')
+def manage_create_category():
+    return {
+        '__template__': 'manage_category_edit.html',
+        'id': '',
+        'action': '/api/categorys'
+    }
+
+@get('/manage/categorys/edit')
+def manage_edit_category(*, id):
+    return {
+        '__template__': 'manage_category_edit.html',
+        'id': id,
+        'action': '/api/categorys/%s' % id
+    }
 
 @post('/api/authenticate')
 async def authenticate(*, email, password):
@@ -333,3 +355,44 @@ async def api_delete_blog(request, *, id):
     await blog.remove()
     return dict(id=id)
 
+@get('/api/categorys')
+async def api_categorys(*, page='1'):
+    page_index = get_page_index(page)
+    num = await Category.find_number('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, categorys=())
+    categorys = await Category.find_all(brderby='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, categorys=categorys)
+
+@get('/api/categorys/{id}')
+async def api_get_category(*, id):
+    category = await Category.find(id)
+    return category 
+
+@post('/api/categorys')
+async def api_create_category(request, *, name):
+    check_admin(request)
+    if not name or not name.strip():
+        raise APIValueError('name', 'name cannot be empty.')
+    category = Category(name=name.strip())
+    await category.save()
+    return category 
+
+@post('/api/categorys/{id}')
+async def api_update_category(id, request, *, name):
+    check_admin(request)
+    category = await Category.find(id)
+    if not name or not name.strip():
+        raise APIValueError('name', 'name cannot be empty.')
+    category.name = name.strip()
+    await category.update()
+    return category 
+
+
+@post('/api/categorys/{id}/delete')
+async def api_delete_category(request, *, id):
+    check_admin(request)
+    category = await Category.find(id)
+    await category.remove()
+    return dict(id=id)
