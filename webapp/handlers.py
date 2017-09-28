@@ -137,6 +137,32 @@ def signout(request):
     logging.info('user signed out.')
     return r
 
+@get('/category/{id}')
+async def get_category(id, request, *, page='1'):
+    user = request.__user__
+    page_index = get_page_index(page) 
+
+    #cats = await Category.find_all(orderBy='created_at desc')
+    category = await Category.find(id)
+
+    num = await Blog.find_number('count(id)', 'cat_id=?', [id])
+    p = Page(num, page_index)
+    if num == 0:
+        blogs = []
+    else:
+        blogs = await Blog.find_all(where='cat_id=?', args=[id], orderBy='created_at desc', limit=(p.offset, p.limit))
+#        for blog in blogs:
+#            blog.html_summary = markdown(blog.summary, extras=['code-friendly', 'fenced-code-blocks'])
+    return {
+        '__template__': 'blogs_by_category.html',
+        'user': user,
+        #'cats': cats,
+        'page': p,
+        'category': category,
+        'blogs': blogs,
+    }
+
+
 @get('/manage/')
 def manage():
     return 'redirect:/manage/comments'
@@ -156,18 +182,22 @@ def manage_blogs(*, page='1'):
     }
 
 @get('/manage/blogs/create')
-def manage_create_blog():
+async def manage_create_blog():
+    cats = await Category.find_all(orderby='created_at desc')
     return {
         '__template__': 'manage_blog_edit.html',
         'id': '',
+        'cats': cats,
         'action': '/api/blogs'
     }
 
 @get('/manage/blogs/edit')
-def manage_edit_blog(*, id):
+async def manage_edit_blog(*, id):
+    cats = await Category.find_all(orderby='created_at desc')
     return {
         '__template__': 'manage_blog_edit.html',
         'id': id,
+        'cats': cats,
         'action': '/api/blogs/%s' % id
     }
 
@@ -320,7 +350,7 @@ async def api_get_blog(*, id):
     return blog
 
 @post('/api/blogs')
-async def api_create_blog(request, *, name, summary, content):
+async def api_create_blog(request, *, name, summary, content, cat_name):
     check_admin(request)
     if not name or not name.strip():
         raise APIValueError('name', 'name cannot be empty.')
@@ -328,12 +358,18 @@ async def api_create_blog(request, *, name, summary, content):
         raise APIValueError('summary', 'summary cannot be empty.')
     if not content or not content.strip():
         raise APIValueError('content', 'content cannot be empty.')
-    blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip())
+    if not cat_name or not cat_name.strip():
+        cat_id = None
+    else:
+        cats = await Category.find_all(where='name=?', args=[cat_name.strip()])
+        cat_id = cats[0].id
+ 
+    blog = Blog(user_id=request.__user__.id, user_name=request.__user__.name, user_image=request.__user__.image, name=name.strip(), summary=summary.strip(), content=content.strip(), cat_id=cat_id, cat_name=cat_name.strip())
     await blog.save()
     return blog
 
 @post('/api/blogs/{id}')
-async def api_update_blog(id, request, *, name, summary, content):
+async def api_update_blog(id, request, *, name, summary, content, cat_name):
     check_admin(request)
     blog = await Blog.find(id)
     if not name or not name.strip():
@@ -342,9 +378,19 @@ async def api_update_blog(id, request, *, name, summary, content):
         raise APIValueError('summary', 'summary cannot be empty.')
     if not content or not content.strip():
         raise APIValueError('content', 'content cannot be empty.')
+
     blog.name = name.strip()
     blog.summary = summary.strip()
     blog.content = content.strip()
+
+    if not cat_name or not cat_name.strip():
+        blog.cat_id = None
+        blog.cat_name = None
+    else:
+        blog.cat_name = cat_name.strip()
+        cats = await Category.find_all(where='name=?', args=[cat_name.strip()])
+        blog.cat_id = cats[0].id
+ 
     await blog.update()
     return blog
 

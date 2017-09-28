@@ -35,6 +35,8 @@ class Blog(Model):
     content = TextField()
     view_count = InterField()
     created_at = FloatField(default=time.time)
+    cat_id = StringField(ddl='varchar(50)')
+    cat_name = StringField(ddl='varchar(50)')
 
 class Comment(Model):
     __table__ = 'comments'
